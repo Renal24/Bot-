@@ -3,56 +3,48 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-# Токен твоего бота
+# Вставь сюда свой токен (не забудь потом скрыть его)
 TOKEN = "7909234577:AAFq9CMjzlEgnhO_Uz2bKYbCGudbqhAWoX8"
+
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# Имитация базы данных маршрутов
-ROUTES_DATA = {
-    f"route_{i}": {
-        "text": f"📍 **Маршрут №{i}**\n\n🚛 Порядок: 1. Склад -> 2. Точка А\n🔐 Сигнализация: Код 1234\n🗺 [Навигатор](https://google.com/maps)",
-        "keys": ["FILE_ID_1", "FILE_ID_2"] # Сюда вставим ID фото ключей
-    } for i in range(1, 11)
-}
-
-# 1. Главное меню (10 кнопок)
+# Обработка команды /start
 @dp.message(Command("start"))
 async def start_handler(message: types.Message):
+    # Создаем строитель клавиатуры
     builder = InlineKeyboardBuilder()
+
+    # В цикле создаем 10 кнопок
     for i in range(1, 11):
-        builder.button(text=f"Маршрут-{i}", callback_data=f"route_{i}")
-    
-    builder.adjust(2) # Кнопки в два ряда
-    await message.answer("Выберите маршрут:", reply_markup=builder.as_markup())
+        builder.button(
+            text=f"Кнопка {i}", 
+            callback_data=f"btn_{i}"
+        )
 
-# 2. Обработка нажатия на маршрут
-@dp.callback_query(F.data.startswith("route_"))
-async def show_route(callback: types.CallbackQuery):
-    route_id = callback.data
-    data = ROUTES_DATA.get(route_id)
-    
-    # Кнопка для просмотра ключей
-    builder = InlineKeyboardBuilder()
-    builder.button(text="📸 Посмотреть фото ключей", callback_data=f"keys_{route_id}")
-    
-    await callback.message.answer(data["text"], parse_mode="Markdown", reply_markup=builder.as_markup())
-    await callback.answer()
+    # Указываем, сколько кнопок будет в ряду (например, по 2)
+    builder.adjust(2)
 
-# 3. Отправка фото ключей (альбомом)
-@dp.callback_query(F.data.startswith("keys_"))
-async def show_keys(callback: types.CallbackQuery):
-    route_id = callback.data.replace("keys_", "")
-    photos = ROUTES_DATA[route_id]["keys"]
+    await message.answer(
+        "Привет! Вот твои 10 кнопок:",
+        reply_markup=builder.as_markup()
+    )
+
+# Обработка нажатия на любую из кнопок
+@dp.callback_query(F.data.startswith("btn_"))
+async def callback_handler(callback: types.CallbackQuery):
+    # Получаем номер кнопки из callback_data
+    button_number = callback.data.split("_")[1]
     
-    # Формируем группу медиа (альбом)
-    media_group = [types.InputMediaPhoto(media=photo_id) for photo_id in photos]
-    
-    await callback.message.answer_media_group(media=media_group)
-    await callback.answer()
+    await callback.message.answer(f"Ты нажал на кнопку номер {button_number}!")
+    await callback.answer() # Закрываем "часики" на кнопке
 
 async def main():
+    print("Бот запущен...")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Бот выключен")
